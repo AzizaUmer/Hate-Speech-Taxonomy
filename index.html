@@ -4,63 +4,7 @@
 <meta charset="UTF-8">
 <title>Interactive Hate Speech Taxonomy Editor</title>
 <script src="https://d3js.org/d3.v7.min.js"></script>
-<style>
-  body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: #f9fafb;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-  header {
-    padding: 15px;
-    text-align: center;
-    background: #fff;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  }
-  .container {
-    flex: 1;
-    display: flex;
-    overflow: hidden;
-  }
-  .left {
-    flex: 1;
-    overflow: auto; /* both vertical and horizontal scroll */
-    border-right: 1px solid #eee;
-  }
-  svg {
-    width: 2000px; /* large enough for horizontal scroll */
-    height: 2000px; /* large enough for vertical scroll */
-  }
-  .panel {
-    width: 360px;
-    background: #fff;
-    padding: 15px;
-    box-sizing: border-box;
-    overflow-y: auto;
-  }
-  .panel textarea, .panel input {
-    width: 100%;
-    box-sizing: border-box;
-    margin-top: 5px;
-    margin-bottom: 10px;
-    padding: 6px;
-    font-family: inherit;
-  }
-  button {
-    margin-top: 4px;
-    margin-bottom: 6px;
-    padding: 6px 10px;
-    font-size: 13px;
-    cursor: pointer;
-  }
-  .meta {
-    font-size: 12px;
-    color: #555;
-    margin-bottom: 10px;
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
@@ -74,10 +18,8 @@
   <div class="panel">
     <h3 id="panelTitle">Select a node</h3>
     <div class="meta" id="panelMeta">Depth: — • Children: —</div>
-    
     <label>Definition:</label>
-    <textarea id="panelDef" placeholder="Node definition"></textarea>
-
+    <textarea id="panelDef"></textarea>
     <hr>
     <h4>Add / Update Node</h4>
     <label>Node Name:</label>
@@ -87,27 +29,24 @@
     <button id="addNodeBtn">Add Node</button>
     <button id="updateNodeBtn">Update Node</button>
     <button id="deleteNodeBtn">Delete Node</button>
-
     <hr>
     <h4>Tree Controls</h4>
     <button id="expandAllBtn">Expand All</button>
     <button id="collapseAllBtn">Collapse All</button>
     <button id="toggleLayoutBtn">Toggle Radial</button>
-
-    <hr>
-    <h4>Level Controls</h4>
+    <br><br>
     <label>Level to Expand:</label>
     <input type="number" id="expandLevelInput" min="0" placeholder="Enter level">
     <button id="expandLevelBtn">Expand Level</button>
+    <br>
     <label>Level to Collapse:</label>
     <input type="number" id="collapseLevelInput" min="0" placeholder="Enter level">
     <button id="collapseLevelBtn">Collapse Level</button>
-
     <hr>
-    <h4>Export / Import</h4>
     <button id="exportJsonBtn">Export JSON</button>
     <button id="exportPngBtn">Export PNG</button>
     <input type="file" id="importJsonInput" accept="application/json">
+    <hr>
   </div>
 </div>
 <script src="script.js"></script>
