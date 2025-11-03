@@ -89,25 +89,39 @@ const data = {
   ]
 };
 
-
 // D3 tree setup
 const svg = d3.select("#tree");
-const width = svg.node().getBoundingClientRect().width;
-const height = svg.node().getBoundingClientRect().height;
-const g = svg.append("g").attr("transform","translate(50,50)");
-const treeLayout = d3.tree().size([height-100, width-200]);
+let width = svg.node().clientWidth;
+let height = svg.node().clientHeight;
 
+// Add zoom & pan
+const g = svg.append("g");
+const zoom = d3.zoom()
+    .scaleExtent([0.2, 3])
+    .on("zoom", (event) => {
+        g.attr("transform", event.transform);
+    });
+svg.call(zoom);
+
+let treeLayout = d3.tree().size([height - 100, width - 200]);
 let root, selectedNode, nodeId = 0, radial = false;
 const tooltip = d3.select("body").append("div").attr("class","tooltip").style("opacity",0);
 
 // Initialize tree
 function initTree(){
+  width = svg.node().clientWidth;
+  height = svg.node().clientHeight;
+  treeLayout.size([height - 100, width - 200]);
+
   root = d3.hierarchy(data);
-  root.x0 = height/2;
+  root.x0 = height / 2;
   root.y0 = 0;
   selectedNode = root;
   if(root.children) root.children.forEach(collapse);
   update(root);
+
+  // Center tree and reset zoom
+  svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity.translate(width/4,50).scale(1));
 }
 
 // Collapse helper
@@ -115,11 +129,41 @@ function collapse(d){ if(d.children){ d._children=d.children; d._children.forEac
 function expandAll(d){ if(d._children){d.children=d._children; d._children=null;} if(d.children)d.children.forEach(expandAll);}
 function collapseAll(d){ if(d.children){d._children=d.children; d.children=null;} if(d._children)d._children.forEach(collapseAll); }
 
+// Expand/collapse by node level
+function expandLevel(level){
+  root.each(d=>{
+    if(d.depth === level && d._children){
+      d.children = d._children;
+      d._children = null;
+    }
+  });
+  update(root);
+}
+function collapseLevel(level){
+  root.each(d=>{
+    if(d.depth === level && d.children){
+      d._children = d.children;
+      d.children = null;
+    }
+  });
+  update(root);
+}
+
 function update(source){
+  width = svg.node().clientWidth;
+  height = svg.node().clientHeight;
+  treeLayout.size([height-100, width-200]);
+
   const treeData = treeLayout(root);
   const nodes = treeData.descendants();
   const links = treeData.links();
-  nodes.forEach(d=>{ if(radial){ let r=d.y,a=d.x; d.x=r*Math.sin(a); d.y=r*Math.cos(a); } else d.y=d.depth*180; });
+  nodes.forEach(d=>{ 
+    if(radial){ 
+      let r=d.y,a=d.x; 
+      d.x=r*Math.sin(a); 
+      d.y=r*Math.cos(a); 
+    } else d.y=d.depth*180; 
+  });
 
   // Nodes
   const node = g.selectAll("g.node").data(nodes,d=>d.id|| (d.id=++nodeId));
@@ -127,12 +171,19 @@ function update(source){
     .attr("class","node")
     .attr("transform",`translate(${source.y0},${source.x0})`)
     .on("click",(event,d)=>{ selectedNode=d; loadPanel(d); })
-    .on("mouseover",(event,d)=>{ tooltip.transition().duration(150).style("opacity",0.9); tooltip.html(`<strong>${d.data.name}</strong><br>${d.data.definition||'No details.'}`); })
+    .on("mouseover",(event,d)=>{ 
+        tooltip.transition().duration(150).style("opacity",0.9); 
+        tooltip.html(`<strong>${d.data.name}</strong><br>${d.data.definition||'No details.'}`); 
+    })
     .on("mousemove", event=>tooltip.style("left",(event.pageX+10)+"px").style("top",(event.pageY+10)+"px"))
     .on("mouseout",()=>tooltip.transition().duration(200).style("opacity",0));
 
   nodeEnter.append("circle").attr("r",1e-6).style("fill", d=>d._children?"#ffb74d":"#4f6ef7");
-  nodeEnter.append("text").attr("dy",4).attr("x",d=>d.children||d._children?-12:12).attr("text-anchor",d=>d.children||d._children?"end":"start").text(d=>d.data.name);
+  nodeEnter.append("text")
+    .attr("dy",4)
+    .attr("x",d=>d.children||d._children?-12:12)
+    .attr("text-anchor",d=>d.children||d._children?"end":"start")
+    .text(d=>d.data.name);
 
   const nodeUpdate = nodeEnter.merge(node);
   nodeUpdate.transition().duration(350).attr("transform",d=>`translate(${d.y},${d.x})`);
@@ -141,9 +192,15 @@ function update(source){
 
   // Links
   const link = g.selectAll("path.link").data(links,d=>d.target.id);
-  const linkEnter = link.enter().insert("path","g").attr("class","link").attr("d",d=>{ const o={x:source.x0,y:source.y0}; return diagonal(o,o); });
+  const linkEnter = link.enter().insert("path","g").attr("class","link").attr("d",d=>{ 
+      const o={x:source.x0,y:source.y0}; 
+      return diagonal(o,o); 
+  });
   linkEnter.merge(link).transition().duration(350).attr("d",d=>diagonal(d.source,d.target));
-  link.exit().transition().duration(350).attr("d",d=>{ const o={x:source.x,y:source.y}; return diagonal(o,o); }).remove();
+  link.exit().transition().duration(350).attr("d",d=>{ 
+      const o={x:source.x,y:source.y}; 
+      return diagonal(o,o); 
+  }).remove();
 
   nodes.forEach(d=>{ d.x0=d.x; d.y0=d.y; });
 }
@@ -159,11 +216,26 @@ function loadPanel(d){
   document.getElementById('newNodeDesc').value=d.data.definition||'';
 }
 
-// Buttons
+// Buttons (existing + level expand/collapse)
 document.getElementById("expandAllBtn").addEventListener("click", ()=>{ expandAll(root); update(root); });
 document.getElementById("collapseAllBtn").addEventListener("click", ()=>{ collapseAll(root); update(root); });
 document.getElementById("toggleLayoutBtn").addEventListener("click", ()=>{ radial=!radial; update(root); });
-document.getElementById("refreshBtn").addEventListener("click", ()=>{ g.selectAll("*").remove(); initTree(); });
+document.getElementById("refreshBtn").addEventListener("click", ()=>{
+  g.selectAll("*").remove(); 
+  svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity); // reset zoom
+  initTree(); 
+});
+
+// Level buttons
+document.getElementById("expandLevelBtn").addEventListener("click", ()=>{
+  const level = parseInt(document.getElementById("expandLevelInput").value);
+  if(!isNaN(level)) expandLevel(level);
+});
+document.getElementById("collapseLevelBtn").addEventListener("click", ()=>{
+  const level = parseInt(document.getElementById("collapseLevelInput").value);
+  if(!isNaN(level)) collapseLevel(level);
+});
+
 
 // Add Node
 document.getElementById("addNodeBtn").addEventListener("click", ()=>{
