@@ -1,0 +1,12 @@
+body { margin:0; font-family: Arial, sans-serif; background: #f9fafb; }
+header { padding:15px; text-align:center; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,0.05); }
+.container { display:flex; height: calc(100vh - 70px); }
+.left { flex:1; overflow:auto; }
+svg { width:100%; height:100%; }
+.panel { width:360px; background:#fff; border-left:1px solid #eee; padding:15px; box-sizing:border-box; overflow:auto; }
+.node circle { fill: #4f6ef7; stroke:#fff; stroke-width:2px; cursor:pointer; }
+.node text { font-size:12px; }
+.link { fill:none; stroke:#ccc; stroke-width:2px; }
+.tooltip { position:absolute; pointer-events:none; padding:6px 10px; background:rgba(0,0,0,0.75); color:#fff; border-radius:4px; font-size:12px; max-width:250px; }
+input, textarea { width:100%; box-sizing:border-box; margin-top:5px; margin-bottom:10px; padding:6px; font-family:inherit; }
+button { margin-top:4px; margin-bottom:6px; padding:6px 10px; font-size:13px; cursor:pointer; }

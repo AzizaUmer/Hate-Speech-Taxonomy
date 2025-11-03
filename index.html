@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Interactive Hate Speech Taxonomy Editor</title>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h2>Interactive Taxonomy of Hate Speech Platform Policy</h2>
+  <button id="refreshBtn" style="margin-left:20px;padding:5px 10px;">Refresh</button>
+</header>
+<div class="container">
+  <div class="left">
+    <svg id="tree"></svg>
+  </div>
+  <div class="panel">
+    <h3 id="panelTitle">Select a node</h3>
+    <div class="meta" id="panelMeta">Depth: — • Children: —</div>
+    <label>Definition:</label>
+    <textarea id="panelDef"></textarea>
+    <hr>
+    <h4>Add / Update Node</h4>
+    <label>Node Name:</label>
+    <input type="text" id="newNodeName" placeholder="Node name">
+    <label>Node Description:</label>
+    <textarea id="newNodeDesc" placeholder="Node description"></textarea>
+    <button id="addNodeBtn">Add Node</button>
+    <button id="updateNodeBtn">Update Node</button>
+    <button id="deleteNodeBtn">Delete Node</button>
+    <hr>
+    <button id="expandAllBtn">Expand All</button>
+    <button id="collapseAllBtn">Collapse All</button>
+    <button id="toggleLayoutBtn">Toggle Radial</button>
+	<hr>
+    <button id="exportJsonBtn">Export JSON</button>
+    <button id="exportPngBtn">Export PNG</button>
+    <input type="file" id="importJsonInput" accept="application/json">
+    <hr>
+  </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
