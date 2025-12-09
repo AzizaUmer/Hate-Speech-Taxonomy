@@ -21,6 +21,7 @@ header {
   flex: 1;
   overflow: auto; /* enable both horizontal & vertical scroll */
   background: #f9fafb;
+  transition: all 0.3s ease;
 }
 
 /* Right side: panel */
@@ -30,15 +31,83 @@ header {
   border-left: 1px solid #eee;
   padding: 15px;
   box-sizing: border-box;
-  overflow: auto;
+  overflow: hidden;
+  transition: width 0.3s ease;
+}
+.panel.collapsed {
+  width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+.panel-section.collapsed .panel-content {
+  max-height: 0;
+  padding-top: 0;
+  overflow: hidden;
+}
+
+.panel-header {
+  cursor: pointer;
+  user-select: none;
+  font-weight: bold;
+  padding: 5px 0;
+}
+.panel-content {
+  max-height: 1000px; /* expanded */
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding-top: 10px;
+}
+/* Panel toggle button */
+#togglePanelBtn {
+  background: #f0f0f0;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+/* Collapsible sections inside panel */
+.collapsible {
+  cursor: pointer;
+  padding: 8px;
+  background: #f5f5f5;
+  margin-top: 5px;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-weight: bold;
+  position: relative;
+}
+
+.collapsible:after {
+  content: "▼";
+  position: absolute;
+  right: 10px;
+}
+
+.collapsible.active:after {
+  content: "▲";
+}
+
+.collapsible-content {
+  max-height: 1000px; /* large enough to show content */
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  padding: 0;
+}
+
+.collapsible-content.collapsed {
+  max-height: 0;
+  padding: 0;
 }
 
 /* SVG fills container width */
-svg {
-  width: max-content; /* allows horizontal scroll if wider than container */
-  height: max-content; /* allows vertical scroll if taller than container */
-  min-width: 1200px; /* optional: ensures initial scroll if tree is wide */
-  min-height: 800px; /* optional: ensures vertical scroll for tall trees */
+.left svg {
+  width: 1200px;
+  height: 800px;
+  display: block;
 }
 
 /* Node & link styles */
@@ -71,7 +140,6 @@ svg {
 }
 
 input, textarea {
-  width: 100%;
   box-sizing: border-box;
   margin-top: 5px;
   margin-bottom: 10px;
@@ -85,4 +153,6 @@ button {
   padding: 6px 10px;
   font-size: 13px;
   cursor: pointer;
+  border: none;
+  font-weight: bold;
 }
