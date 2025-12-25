@@ -4,113 +4,105 @@
 <meta charset="UTF-8">
 <title>Interactive Hate Speech Taxonomy Editor</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
 <body>
+
+<!-- ====== Header / Controls ====== -->
 <header>
-  <h2>Interactive Taxonomy of Hate Speech</h2>
-  <select id="taxonomySelector" style="font-size:14px; padding:5px;">
+  <h2>Interactive Hate Speech Taxonomy</h2>
+  <select id="taxonomySelector">
     <option value="merged">Merged Taxonomy</option>
     <option value="platform">Platform Policy Taxonomy</option>
     <option value="country">Country Regulation Taxonomy</option>
     <option value="dataset">Research Dataset Taxonomy</option>
   </select>
-  <button id="refreshBtn" style="margin-left:20px;padding:5px 10px;">Refresh</button>
-  <button id="togglePanelBtn" style="margin-left:20px;padding:5px 10px;">Hide Panel</button>
-  <input type="text" id="platformSearch" placeholder="Search Platform..." style="margin-left:10px;padding:5px;">
+  <button id="refreshBtn">Refresh</button>
+  <button id="togglePanelBtn">Hide Panel</button>
+  <input type="text" id="platformSearch" placeholder="Search node...">
   <button id="searchBtn">Search</button>
-
-
+  <button id="clearSearchBtn">Expand Tree</button>
+  <button id="toggleFullscreenBtn">Full Screen</button>
 </header>
 
+<!-- Breadcrumb -->
+<div id="breadcrumb"></div>
 
+<!-- ====== Main Container ====== -->
 <div class="container">
   <!-- Left: Tree -->
-  <div class="left">
+  <div class="left" id="treeContainer">
     <svg id="tree"></svg>
   </div>
 
-  <!-- Right: Collapsible Panel -->
-<div class="panel">
-  <h3 id="panelTitle">Select a node</h3>
-  <div class="meta" id="panelMeta">Depth: — • Children: —</div>
-  <label>Definition:</label>
-  <textarea id="panelDef"></textarea>
-  <hr>
+  <!-- Right: Panel -->
+  <div class="panel">
+    <h3 id="panelTitle">Select a node</h3>
+    <div class="meta" id="panelMeta">Depth: — • Children: —</div>
+    <label>Definition:</label>
+    <textarea id="panelDef"></textarea>
 
-  <!-- Add / Update Node Section -->
-  <div class="panel-section" id="nodeEditorSection">
-    <h4 class="panel-header">Add / Update Node ►</h4>
-    <div class="panel-content">
-      <label>Node Name:</label>
-      <input type="text" id="newNodeName" placeholder="Node name">
-      <label>Node Description:</label>
-      <textarea id="newNodeDesc" placeholder="Node description"></textarea>
-      <button id="addNodeBtn">Add Node</button>
-      <button id="updateNodeBtn">Update Node</button>
-      <button id="deleteNodeBtn">Delete Node</button>
+    <!-- Node Editor -->
+    <div class="panel-section" id="nodeEditorSection">
+      <h4 class="panel-header">Add / Update Node ►</h4>
+      <div class="panel-content">
+        <label>Node Name:</label>
+        <input type="text" id="newNodeName" placeholder="Node name">
+        <label>Node Description:</label>
+        <textarea id="newNodeDesc" placeholder="Node description"></textarea>
+        <button id="addNodeBtn">Add Node</button>
+        <button id="updateNodeBtn">Update Node</button>
+        <button id="deleteNodeBtn">Delete Node</button>
+      </div>
     </div>
-  </div>
 
-  <hr>
-
-  <!-- Tree Controls Section -->
-  <div class="panel-section" id="treeControlsSection">
-    <h4 class="panel-header">Tree Controls ►</h4>
-    <div class="panel-content">
-      <button id="expandAllBtn">Expand All</button>
-      <button id="collapseAllBtn">Collapse All</button>
-      <button id="toggleLayoutBtn">Toggle Radial</button>
-      <br><br>
-      <label>Level to Expand:</label>
-      <input type="number" id="expandLevelInput" min="0" placeholder="Enter level">
-      <button id="expandLevelBtn">Expand Level</button>
-      <br>
-      <label>Level to Collapse:</label>
-      <input type="number" id="collapseLevelInput" min="0" placeholder="Enter level">
-      <button id="collapseLevelBtn">Collapse Level</button>
+    <!-- Tree Controls -->
+    <div class="panel-section" id="treeControlsSection">
+      <h4 class="panel-header">Tree Controls ►</h4>
+      <div class="panel-content">
+        <button id="expandAllBtn">Expand All</button>
+        <button id="collapseAllBtn">Collapse All</button>
+        <button id="toggleRadialBtn">Toggle Radial</button>
+        <br><br>
+        <label>Level to Expand:</label>
+        <input type="number" id="expandLevelInput" min="0" placeholder="Enter level">
+        <button id="expandLevelBtn">Expand Level</button>
+        <br>
+        <label>Level to Collapse:</label>
+        <input type="number" id="collapseLevelInput" min="0" placeholder="Enter level">
+        <button id="collapseLevelBtn">Collapse Level</button>
+      </div>
     </div>
-  </div>
 
-  <hr>
-
-  <!-- Export / Import Section -->
-  <div class="panel-section" id="exportImportSection">
-    <h4 class="panel-header">Export / Import ►</h4>
-    <div class="panel-content">
-      <button id="exportJsonBtn">Export JSON</button>
-      <button id="exportPngBtn">Export PNG</button>
-      <input type="file" id="importJsonInput" accept="application/json">
+    <!-- Export / Import -->
+    <div class="panel-section" id="exportImportSection">
+      <h4 class="panel-header">Export / Import ►</h4>
+      <div class="panel-content">
+        <button id="exportJsonBtn">Export JSON</button>
+        <button id="exportPngBtn">Export PNG</button>
+        <input type="file" id="importJsonInput" accept="application/json">
+      </div>
     </div>
   </div>
 </div>
 
-</div>
 <!-- Profile Popup -->
-<div id="profilePopup" style="
-    display:none;
-    position:fixed;
-    top:50%;
-    left:50%;
-    transform:translate(-50%,-50%);
-    width:400px;
-    max-height:80%;
-    overflow-y:auto;
-    background:#fff;
-    border:1px solid #ccc;
-    box-shadow:0 0 15px rgba(0,0,0,0.3);
-    padding:20px;
-    z-index:1000;
-">
-  <button id="closeProfilePopup" style="float:right;">✖ Close</button>
+<div id="profilePopup">
+  <div style="display:flex; justify-content: space-between; align-items:center; margin-bottom: 10px;">
+    <span style="font-weight:bold;">Profile</span>
+    <div>
+      <button id="minimizeProfilePopup">_</button>
+      <button id="closeProfilePopup">✖</button>
+    </div>
+  </div>
   <h3 id="profileTitle"></h3>
+  <span id="profileTaxonomyBadge" style="font-size:12px; color:#555;"></span>
   <div id="profileContent"></div>
-  <button id="downloadProfileTxt" style="margin-top:10px;">Download TXT</button>
-  <button id="downloadProfilePdf" style="margin-top:10px;">Download PDF</button>
+  <button id="downloadProfileTxt">Download TXT</button>
+  <button id="downloadProfilePdf">Download PDF</button>
 </div>
 
 <script src="script.js"></script>
-
 </body>
 </html>
