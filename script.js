@@ -1,3 +1,4 @@
+// script.js - replace your existing script.js with this file
 document.addEventListener("DOMContentLoaded", () => {
 const merged = {
   name: "Hate Speech Taxonomy",
