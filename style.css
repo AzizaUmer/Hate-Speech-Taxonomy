@@ -1,158 +1,345 @@
-body {
+/* ===== Reset & Fonts ===== */
+* {
+  box-sizing: border-box;
   margin: 0;
-  font-family: Arial, sans-serif;
-  background: #f9fafb;
+  padding: 0;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+body {
+  background-color: #f4f6f9;
+  color: #333;
+  overflow: hidden;
+}
+
+/* ===== Header ===== */
 header {
-  padding: 15px;
-  text-align: center;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  background-color: #2c3e50;
+  color: #fff;
+  padding: 15px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
+header h2 {
+  flex: 1 1 100%;
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+header select,
+header input,
+header button {
+  border-radius: 4px;
+  border: none;
+  outline: none;
+}
+
+header select,
+header input {
+  padding: 6px 10px;
+  font-size: 14px;
+}
+
+header button {
+  padding: 6px 12px;
+  background-color: #3498db;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+header button:hover {
+  background-color: #2980b9;
+}
+
+/* ===== Breadcrumb ===== */
+#breadcrumb {
+  margin: 5px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* ===== Main Container ===== */
 .container {
   display: flex;
-  height: calc(100vh - 70px);
+  height: calc(100vh - 80px);
+  overflow: hidden;
 }
 
-/* Left side: tree with horizontal scroll */
+/* ===== Tree Section ===== */
 .left {
-  flex: 1;
-  overflow: auto; /* enable both horizontal & vertical scroll */
-  background: #f9fafb;
-  transition: all 0.3s ease;
-}
-
-/* Right side: panel */
-.panel {
-  width: 360px;
-  background: #fff;
-  border-left: 1px solid #eee;
-  padding: 15px;
-  box-sizing: border-box;
-  overflow: hidden;
-  transition: width 0.3s ease;
-}
-.panel.collapsed {
-  width: 0;
-  padding: 0;
-  overflow: hidden;
-}
-.panel-section.collapsed .panel-content {
-  max-height: 0;
-  padding-top: 0;
-  overflow: hidden;
-}
-
-.panel-header {
-  cursor: pointer;
-  user-select: none;
-  font-weight: bold;
-  padding: 5px 0;
-}
-.panel-content {
-  max-height: 1000px; /* expanded */
-  overflow: hidden;
-  transition: max-height 0.3s ease, padding 0.3s ease;
-  padding-top: 10px;
-}
-/* Panel toggle button */
-#togglePanelBtn {
-  background: #f0f0f0;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  text-align: left;
-  margin-bottom: 8px;
-  font-weight: bold;
-}
-
-/* Collapsible sections inside panel */
-.collapsible {
-  cursor: pointer;
-  padding: 8px;
-  background: #f5f5f5;
-  margin-top: 5px;
-  border: none;
-  width: 100%;
-  text-align: left;
-  font-weight: bold;
+  flex: 2;
+  background-color: #fff;
+  border-right: 1px solid #ccc;
+  padding: 10px;
+  overflow: auto;
   position: relative;
 }
 
-.collapsible:after {
-  content: "▼";
-  position: absolute;
-  right: 10px;
-}
-
-.collapsible.active:after {
-  content: "▲";
-}
-
-.collapsible-content {
-  max-height: 1000px; /* large enough to show content */
-  overflow: hidden;
-  transition: max-height 0.3s ease, padding 0.3s ease;
-  padding: 0;
-}
-
-.collapsible-content.collapsed {
-  max-height: 0;
-  padding: 0;
-}
-
-/* SVG fills container width */
 .left svg {
-  width: 1200px;
-  height: 800px;
+  width: 100%;
+  height: 100%;
+}
+
+/* Fullscreen tree */
+.left.fullscreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 999;
+  background-color: #fff;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Hide header when fullscreen */
+body.fullscreen header {
+  display: none;
+}
+
+/* ===== Tooltip ===== */
+.tooltip {
+  position: absolute;
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  border-radius: 5px;
+  pointer-events: none;
+  z-index: 1000;
+  transition: opacity 0.2s;
+}
+
+/* ===== Panel ===== */
+.panel {
+  flex: 1;
+  background-color: #fdfdfd;
+  padding: 15px;
+  overflow-y: auto;
+  border-left: 1px solid #ccc;
+  transition: all 0.3s ease;
+}
+
+.panel.hide {
+  width: 0;
+  padding: 0;
+  border-left: none;
+  overflow: hidden;
+}
+
+.panel h3 {
+  margin-bottom: 8px;
+  color: #2c3e50;
+}
+
+.panel .meta {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.panel label {
+  font-weight: 600;
+  margin-top: 8px;
   display: block;
 }
 
-/* Node & link styles */
-.node circle {
-  fill: #4f6ef7;
-  stroke: #fff;
-  stroke-width: 2px;
-  cursor: pointer;
+.panel textarea,
+.panel input[type="text"],
+.panel input[type="number"] {
+  width: 100%;
+  padding: 6px 10px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
+/* ===== Panel Sections ===== */
+.panel-section {
+  margin-bottom: 15px;
+}
+
+.panel-header {
+  background-color: #3498db;
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-bottom: 5px;
+}
+
+.panel-header:hover {
+  background-color: #2980b9;
+}
+
+.panel-section.collapsed .panel-content {
+  display: none;
+}
+
+.panel-content {
+  padding: 6px 10px;
+  border-left: 3px solid #3498db;
+  margin-top: 5px;
+}
+
+.panel-content button {
+  margin-top: 6px;
+  margin-right: 5px;
+  background-color: #2ecc71;
+  color: #fff;
+  border: none;
+  padding: 6px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: 0.2s;
+}
+
+.panel-content button:hover {
+  background-color: #27ae60;
+}
+
+/* ===== Control Buttons ===== */
+#expandAllBtn,
+#collapseAllBtn,
+#toggleLayoutBtn,
+#expandLevelBtn,
+#collapseLevelBtn {
+  background-color: #e67e22;
+}
+
+#expandAllBtn:hover,
+#collapseAllBtn:hover,
+#toggleLayoutBtn:hover,
+#expandLevelBtn:hover,
+#collapseLevelBtn:hover {
+  background-color: #d35400;
+}
+
+#exportJsonBtn,
+#exportPngBtn {
+  background-color: #9b59b6;
+}
+
+#exportJsonBtn:hover,
+#exportPngBtn:hover {
+  background-color: #8e44ad;
+}
+
+/* ===== Node Text & Circles ===== */
 .node text {
   font-size: 12px;
-}
-
-.link {
-  fill: none;
-  stroke: #ccc;
-  stroke-width: 2px;
-}
-
-.tooltip {
-  position: absolute;
+  font-weight: 500;
   pointer-events: none;
-  padding: 6px 10px;
-  background: rgba(0,0,0,0.75);
-  color: #fff;
-  border-radius: 4px;
-  font-size: 12px;
-  max-width: 250px;
 }
 
-input, textarea {
-  box-sizing: border-box;
-  margin-top: 5px;
-  margin-bottom: 10px;
-  padding: 6px;
-  font-family: inherit;
+.node circle {
+  fill: #4f6ef7;
+  stroke: #ffffff;
+  stroke-width: 2px;
+  r: 6;
+  transition: transform 0.15s ease, fill 0.15s ease;
 }
 
-button {
-  margin-top: 4px;
-  margin-bottom: 6px;
-  padding: 6px 10px;
+/* Highlight nodes */
+.node.highlight circle {
+  stroke: #ff4d4d;
+  stroke-width: 4px;
+}
+
+.link.highlight {
+  stroke: #ff4d4d;
+  stroke-width: 3px;
+}
+
+/* Tooltip always visible on hover */
+.node:hover text {
+  pointer-events: all;
   font-size: 13px;
-  cursor: pointer;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+/* Search highlight */
+.node.search-highlight circle {
+  stroke: #ff5733;
+  stroke-width: 4px;
+}
+
+.link.search-highlight {
+  stroke: #ff5733;
+  stroke-width: 3px;
+}
+
+/* ===== Profile Popup ===== */
+#profilePopup {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 400px;
+  max-height: 80%;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  padding: 20px;
+  z-index: 1000;
+  border-radius: 8px;
+}
+
+#profilePopup button {
+  background-color: #e74c3c;
+  color: #fff;
   border: none;
-  font-weight: bold;
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+#profilePopup button:hover {
+  background-color: #c0392b;
+}
+
+/* Minimized profile popup */
+#profilePopup.minimized {
+  width: 200px;
+  height: 40px;
+  overflow: hidden;
+  padding: 5px 10px;
+}
+
+#profilePopup.minimized #profileContent,
+#profilePopup.minimized #downloadProfileTxt,
+#profilePopup.minimized #downloadProfilePdf,
+#profilePopup.minimized #profileTitle,
+#profilePopup.minimized #profileTaxonomyBadge {
+  display: none;
+}
+
+/* Responsive Layout */
+@media screen and (max-width: 900px) {
+  .container {
+    flex-direction: column;
+  }
+
+  .left,
+  .panel {
+    flex: unset;
+    height: 50vh;
+  }
+
+  header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
