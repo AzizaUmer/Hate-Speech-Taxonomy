@@ -1,4 +1,3 @@
-// script.js - replace your existing script.js with this file
 document.addEventListener("DOMContentLoaded", () => {
 const merged = {
   name: "Hate Speech Taxonomy",
@@ -2182,93 +2181,167 @@ const datasetData = {
   ]
 };
 
-let data =merged;                
-  const svg = d3.select("#tree");
-  let g; // group for pan/zoom content
-  let zoom;
-  let treeLayout;
-  let root;
-  let nodeIdCounter = 0;
-  let selectedNode = null;
-  let radial = false;
 
-  // Tooltip
-  const tooltip = d3.select("body")
-    .append("div")
-    .attr("class", "tooltip")
-    .style("opacity", 0);
 
-  // ---------- Init tree ----------
-  function initTree() {
-    svg.selectAll("*").remove();
-    nodeIdCounter = 0;
+let data = merged; // default
+const svg = d3.select("#tree");
+let g; // group for pan/zoom content
+let zoom;
+let treeLayout;
+let root;
+let nodeIdCounter = 0;
+let selectedNode = null;
+let radial = false;
+// Tooltip
+const tooltip = d3.select("body")
+  .append("div")
+  .attr("class", "tooltip")
+  .style("opacity", 0);
+// ---------- Init tree ----------
+function initTree() {
+  svg.selectAll("*").remove();
+  nodeIdCounter = 0;
 
-    const container = svg.node().parentNode;
-    const width = container.clientWidth || 1200;
-    const height = container.clientHeight || 800;
+  const container = svg.node().parentNode;
+  const width = container.clientWidth || 1200;
+  const height = container.clientHeight || 800;
 
-    svg.attr("width", width).attr("height", height);
+  svg.attr("width", width).attr("height", height);
 
-    g = svg.append("g").attr("transform", `translate(0,0)`);
+  g = svg.append("g").attr("transform", `translate(0,0)`);
 
-    zoom = d3.zoom()
-      .scaleExtent([0.2, 3])
-      .on("zoom", (event) => { g.attr("transform", event.transform); });
-    svg.call(zoom);
+  zoom = d3.zoom()
+    .scaleExtent([0.2, 3])
+    .on("zoom", (event) => { g.attr("transform", event.transform); });
+  svg.call(zoom);
 
-    treeLayout = d3.tree().size([height - 100, width - 40]);
+  treeLayout = d3.tree().size([height - 100, width - 40]);
 
-    root = d3.hierarchy(data);
-    root.x0 = height / 2;
-    root.y0 = 0;
-    root.children && root.children.forEach(collapse);
-    update(root);
+  root = d3.hierarchy(data);
+  root.x0 = height / 2;
+  root.y0 = 0;
+  root.children && root.children.forEach(collapse);
+  update(root);
 
-    svg.transition().duration(300)
-      .call(zoom.transform, d3.zoomIdentity.translate(width / 6, 50).scale(1));
+  svg.transition().duration(300)
+    .call(zoom.transform, d3.zoomIdentity.translate(width / 6, 50).scale(1));
+}
+
+// ---------- Taxonomy Selection ----------
+const taxonomies = {
+  merged: merged,
+  platform: platformData,
+  country: countryData,
+  dataset: datasetData
+};
+
+const taxonomySelect = document.getElementById("taxonomySelector");
+taxonomySelect?.addEventListener("change", (event) => {
+  const selectedValue = event.target.value;
+  if (!selectedValue || !taxonomies[selectedValue]) return;
+
+  // Replace global data
+  data = JSON.parse(JSON.stringify(taxonomies[selectedValue]));
+
+  // Reset tree state
+  selectedNode = null;
+  nodeIdCounter = 0;
+  root = d3.hierarchy(data);
+  root.x0 = 400;
+  root.y0 = 0;
+  root.children && root.children.forEach(collapse);
+
+  // Re-render tree
+  update(root);
+
+  // Reset zoom/pan
+  svg.transition().duration(300)
+    .call(zoom.transform, d3.zoomIdentity.translate(200, 50).scale(1));
+});
+// ---------- Profile Popup Controls ----------
+const profilePopup = document.getElementById("profilePopup");
+const closeProfileBtn = document.getElementById("closeProfilePopup");
+const minimizeProfileBtn = document.getElementById("minimizeProfilePopup");
+
+closeProfileBtn?.addEventListener("click", () => {
+  profilePopup.style.display = "none";
+});
+
+minimizeProfileBtn?.addEventListener("click", () => {
+  profilePopup.classList.toggle("minimized");
+});
+// ---------- Collapse / Expand helpers ----------
+function collapse(d) {
+  if (d.children) {
+    d._children = d.children;
+    d._children.forEach(collapse);
+    d.children = null;
   }
+}
 
-  // ---------- Collapse / Expand helpers ----------
-  function collapse(d) { if (d.children) { d._children = d.children; d._children.forEach(collapse); d.children = null; } }
-  function expandAll(d) { if (d._children) { d.children = d._children; d._children = null; } if (d.children) d.children.forEach(expandAll); }
-  function collapseAll(d) { if (d.children) { d._children = d.children; d.children = null; } if (d._children) d._children.forEach(collapseAll); }
-  function expandLevel(level) { root.each(d => { if (d.depth === level && d._children) { d.children = d._children; d._children = null; } }); update(root); }
-  function collapseLevel(level) { root.each(d => { if (d.depth === level && d.children) { d._children = d.children; d.children = null; } }); update(root); }
+function expandAll(d) {
+  if (d._children) {
+    d.children = d._children;
+    d._children = null;
+  }
+  if (d.children) d.children.forEach(expandAll);
+}
 
-  // Flatten including collapsed branches
-  function flattenAllNodes(rootNode) {
-    const nodes = [];
-    function recurse(n) {
-      nodes.push(n);
-      if (n.children) n.children.forEach(recurse);
-      if (n._children) n._children.forEach(recurse);
+function collapseAll(d) {
+  if (d.children) {
+    d._children = d.children;
+    d._children.forEach(collapseAll);
+    d.children = null;
+  }
+}
+
+function expandLevel(level) {
+  root.each(d => {
+    if (d.depth === level && d._children) {
+      d.children = d._children;
+      d._children = null;
     }
-    recurse(rootNode);
-    return nodes;
-  }
+  });
+  update(root);
+}
 
-  // ---------- Rendering update ----------
-  function update(source) {
+function collapseLevel(level) {
+  root.each(d => {
+    if (d.depth === level && d.children) {
+      d._children = d.children;
+      d.children = null;
+    }
+  });
+  update(root);
+}
+// Flatten including collapsed branches
+function flattenAllNodes(rootNode) {
+  const nodes = [];
+  function recurse(n) {
+    nodes.push(n);
+    if (n.children) n.children.forEach(recurse);
+    if (n._children) n._children.forEach(recurse);
+  }
+  recurse(rootNode);
+  return nodes;
+}
+
+// ---------- Rendering update ----------
+function update(source) {
   const container = svg.node().parentNode;
   const height = container.clientHeight || 800;
 
-  // ✅ Dynamic width based on tree depth
   const maxDepth = d3.max(root.descendants(), d => d.depth) || 1;
   const horizSpacing = 260;
   const dynamicWidth = maxDepth * horizSpacing + 400;
 
-  // ✅ Let D3 calculate layout using dynamic width
   treeLayout.nodeSize([15, 300]);
-
-
-  // ✅ Make SVG wide enough for horizontal scrolling
   svg.attr("width", dynamicWidth + 500);
 
   const treeData = treeLayout(root);
   const nodes = treeData.descendants();
   const links = treeData.links();
 
-  // ✅ Only handle radial transform if enabled
   nodes.forEach(d => {
     if (radial) {
       const r = d.y;
@@ -2283,48 +2356,52 @@ let data =merged;
     .data(nodes, d => d.id || (d.id = ++nodeIdCounter));
 
   const nodeEnter = node.enter().append("g")
-    .attr("class", "node")
-    .attr("transform", `translate(${source.y0 || 0},${source.x0 || 0})`)
-    .on("click", function (event, d) {
-      if (d.children) { d._children = d.children; d.children = null; }
-      else if (d._children) { d.children = d._children; d._children = null; }
-      loadPanel(d);
-      update(d);
-    })
-    .on("mouseover", function (event, d) {
-      tooltip.style("opacity", 1)
-        .html(`<strong>${d.data.name}</strong><br>${(d.data.definition || d.data.defination || d.data.description) || 'No details.'}`)
-        .style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px");
-    })
-    .on("mousemove", function (event) {
-      tooltip.style("left", (event.pageX + 10) + "px")
-        .style("top", (event.pageY + 10) + "px");
-    })
-    .on("mouseout", function () {
-      tooltip.style("opacity", 0);
-    });
+  .attr("class", "node")
+  .attr("transform", `translate(${source.y0 || 0},${source.x0 || 0})`)
+  .on("click", function (event, d) {
+    if (d.children) { d._children = d.children; d.children = null; }
+    else if (d._children) { d.children = d._children; d._children = null; }
+    loadPanel(d);
+    update(d);
+  })
+  .on("mouseover", function (event, d) {
+    tooltip.style("opacity", 1)
+      .html(`<strong>${d.data.name}</strong><br>${(d.data.definition || d.data.defination || d.data.description) || 'No details.'}`)
+      .style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY + 10) + "px");
+  })
+  .on("mousemove", function (event) {
+    tooltip.style("left", (event.pageX + 10) + "px")
+      .style("top", (event.pageY + 10) + "px");
+  })
+  .on("mouseout", function () {
+    tooltip.style("opacity", 0);
+  });
 
-  nodeEnter.append("circle")
-    .attr("r", 1e-6)
-    .style("fill", d => d._children ? "#ffb74d" : "#4f6ef7")
-    .style("stroke", "#fff")
-    .style("stroke-width", 2);
+nodeEnter.append("circle")
+  .attr("r", 1e-6)
+  .style("fill", d => d._children ? "#ffb74d" : "#4f6ef7")
+  .style("stroke", "#fff")
+  .style("stroke-width", 2);
 
-  nodeEnter.append("text")
-    .attr("dy", 4)
-    .attr("x", d => (d.children || d._children) ? -12 : 12)
-    .attr("text-anchor", d => (d.children || d._children) ? "end" : "start")
-    .text(d => d.data.name)
-    .style("font-size", "12px");
+nodeEnter.append("text")
+  .attr("dy", 4)
+  .attr("x", d => (d.children || d._children) ? -12 : 12)
+  .attr("text-anchor", d => (d.children || d._children) ? "end" : "start")
+  .text(d => d.data.name)
+  .style("font-size", "12px");
 
-  const nodeUpdate = nodeEnter.merge(node);
-  nodeUpdate.transition().duration(350)
-    .attr("transform", d => `translate(${d.y},${d.x})`);
+// ---- UPDATE ----
+const nodeUpdate = nodeEnter.merge(node);
+nodeUpdate.transition().duration(350)
+  .attr("transform", d => `translate(${d.y},${d.x})`);
 
-  nodeUpdate.select("circle")
-    .attr("r", 7)
-    .style("fill", d => d._children ? "#ffb74d" : "#4f6ef7");
+nodeUpdate.select("circle")
+  .attr("r", 7)
+  .style("fill", d => d._children ? "#ffb74d" : "#4f6ef7")
+  .style("stroke", "#fff")
+  .style("stroke-width", 2);
+
 
   // ---- EXIT NODES ----
   const nodeExit = node.exit();
@@ -2334,98 +2411,114 @@ let data =merged;
 
   // ---- LINKS ----
   const link = g.selectAll("path.link")
-    .data(links, d => d.target.id);
+  .data(links, d => d.target.id);
 
-  const linkEnter = link.enter().insert("path", "g")
-    .attr("class", "link")
-    .attr("d", d => {
-      const o = { x: source.x0 || 0, y: source.y0 || 0 };
-      return diagonal(o, o);
-    });
+const linkEnter = link.enter().insert("path", "g")
+  .attr("class", "link")
+  .attr("stroke", "#ccc")
+  .attr("stroke-width", 2)
+  .attr("fill", "none")
+  .attr("d", d => {
+    const o = { x: source.x0 || 0, y: source.y0 || 0 };
+    return diagonal(o, o);
+  });
 
-  linkEnter.merge(link)
-    .transition().duration(350)
-    .attr("d", d => diagonal(d.source, d.target));
+linkEnter.merge(link)
+  .transition().duration(350)
+  .attr("d", d => diagonal(d.source, d.target));
 
-  link.exit().transition().duration(350)
-    .attr("d", d => {
-      const o = { x: source.x || 0, y: source.y || 0 };
-      return diagonal(o, o);
-    })
-    .remove();
+link.exit().transition().duration(350)
+  .attr("d", d => {
+    const o = { x: source.x || 0, y: source.y || 0 };
+    return diagonal(o, o);
+  })
+  .remove();
 
-  // ✅ Store old positions
   nodes.forEach(d => {
     d.x0 = d.x;
     d.y0 = d.y;
   });
 }
 
-
-  function diagonal(s, d) {
+function diagonal(s, d) {
     return `M ${s.y} ${s.x} C ${(s.y + d.y) / 2} ${s.x}, ${(s.y + d.y) / 2} ${d.x}, ${d.y} ${d.x}`;
   }
+// ---------- Node panel ----------
+function loadPanel(d) {
+  selectedNode = d;
+  document.getElementById('panelTitle').textContent = d.data.name;
+  document.getElementById('panelMeta').textContent = `Depth: ${d.depth} • Children: ${(d.children || d._children || []).length}`;
+  document.getElementById('panelDef').value = d.data.definition || d.data.defination || d.data.description || '';
+  document.getElementById('newNodeName').value = d.data.name || '';
+  document.getElementById('newNodeDesc').value = d.data.definition || d.data.defination || d.data.description || '';
 
-  // ---------- Node panel ----------
-  function loadPanel(d) {
-    selectedNode = d;
-    document.getElementById('panelTitle').textContent = d.data.name;
-    document.getElementById('panelMeta').textContent = `Depth: ${d.depth} • Children: ${(d.children || d._children || []).length}`;
-    // support different spelling of definition field in your data
-    document.getElementById('panelDef').value = d.data.definition || d.data.defination || d.data.description || '';
-    document.getElementById('newNodeName').value = d.data.name || '';
-    document.getElementById('newNodeDesc').value = d.data.definition || d.data.defination || d.data.description || '';
+  const rightPanel = document.querySelector('.panel');
+  if (rightPanel.style.display === 'none') {
+    rightPanel.style.display = 'block';
+    document.getElementById('togglePanelBtn').textContent = 'Hide Panel';
+  }
+}
 
-    const rightPanel = document.querySelector('.panel');
-    if (rightPanel.style.display === 'none') {
-      rightPanel.style.display = 'block';
-      document.getElementById('togglePanelBtn').textContent = 'Hide Panel';
+// ---------- Highlight helpers ----------
+function highlightNodes(nodesToHighlight) {
+  d3.selectAll("g.node circle")
+    .style("stroke", "#fff")
+    .style("stroke-width", 2);
+
+  if (!nodesToHighlight || nodesToHighlight.length === 0) return;
+
+  nodesToHighlight.forEach(d => {
+    d3.selectAll("g.node").filter(n => n === d)
+      .select("circle")
+      .style("stroke", "red")
+      .style("stroke-width", 4);
+  });
+}
+
+function clearHighlights() {
+  d3.selectAll("g.node circle")
+    .style("stroke", "#fff")
+    .style("stroke-width", 2);
+}
+
+// ---------- Utility: isLeaf ----------
+function isLeafNode(n) {
+  const hasChildren = (n.children && n.children.length > 0) || (n._children && n._children.length > 0);
+  return !hasChildren;
+}
+
+// ---------- Search / Filter ----------
+function filterTreeByQuery(query) {
+  const q = query.trim().toLowerCase();
+  if (!q) return d3.hierarchy(data);
+
+  const filteredData = JSON.parse(JSON.stringify(data));
+  const filteredRoot = d3.hierarchy(filteredData);
+
+  function recurse(node) {
+    if (!node.children && !node._children) {
+      const nameMatch = node.data.name && node.data.name.toLowerCase().includes(q);
+      const defMatch = (node.data.definition || node.data.defination || node.data.description || '').toLowerCase().includes(q);
+      return nameMatch || defMatch;
     }
+
+    if (node.children) node.children = node.children.filter(child => recurse(child));
+    if (node._children) node._children = node._children.filter(child => recurse(child));
+
+    return (node.children && node.children.length > 0) || (node._children && node._children.length > 0);
   }
 
-  // ---------- Highlight helpers ----------
-  function highlightNodes(nodesToHighlight) {
-    d3.selectAll("g.node circle")
-      .style("stroke", "#fff")
-      .style("stroke-width", 2);
+  recurse(filteredRoot);
+  return filteredRoot;
+}
 
-    if (!nodesToHighlight || nodesToHighlight.length === 0) return;
-
-    nodesToHighlight.forEach(d => {
-      d3.selectAll("g.node").filter(n => n === d)
-        .select("circle")
-        .style("stroke", "red")
-        .style("stroke-width", 4);
-    });
-  }
-
-  function clearHighlights() {
-    d3.selectAll("g.node circle")
-      .style("stroke", "#fff")
-      .style("stroke-width", 2);
-  }
-
-  // ---------- Utility: isLeaf ----------
-  function isLeafNode(n) {
-    const hasChildren = (n.children && n.children.length > 0) || (n._children && n._children.length > 0);
-    return !hasChildren;
-  }
-
-  // ---------- Search core logic ----------
-  function getCurrentTaxonomyName() {
-    const val = document.getElementById("taxonomySelector") ? document.getElementById("taxonomySelector").value : "platform";
-    return val.charAt(0).toUpperCase() + val.slice(1);
-  }
-
-  // build grouped results where each entry maps ParentCategory -> ChildCategory -> childDefinition(s)
-  // build grouped results where each entry maps ParentCategory -> ChildCategory -> childDefinition(s)
+// ---------- Search rendering ----------
 function searchAndBuildResults(query) {
   const q = query.trim().toLowerCase();
   if (!q) return { groups: {}, taxonomy: getCurrentTaxonomyName(), matchedLeaves: [] };
 
   const all = flattenAllNodes(root);
 
-  // find leaf nodes that match name or definition (case-insensitive)
   const matchedLeaves = all.filter(n => isLeafNode(n) &&
     (
       (n.data.name && n.data.name.toLowerCase().includes(q)) ||
@@ -2434,51 +2527,30 @@ function searchAndBuildResults(query) {
     )
   );
 
-  const groups = {}; // { parentCategoryName: { childCategoryName: Set(definitions) } }
-
+  const groups = {};
   matchedLeaves.forEach(leaf => {
-    // build path from root to leaf
     const fullPath = [];
     let p = leaf;
     while (p) { fullPath.unshift(p); p = p.parent; }
+    const pathExRoot = fullPath.slice(1);
+    if (pathExRoot.length === 0) return;
 
-    // remove overall root (first element)
-    const pathExRoot = fullPath.slice(1); // nodes from first-level under root to leaf
-
-    if (pathExRoot.length === 0) {
-      // leaf is the root node itself — skip
-      return;
-    }
-
-    // childCategory: node immediately above the leaf (node before the last element)
-    // (if leaf is directly under top-level, childCategory becomes that top-level node)
     const childIndex = Math.max(0, pathExRoot.length - 2);
     const childCategoryNode = pathExRoot[childIndex];
     const childCategory = childCategoryNode && childCategoryNode.data.name ? childCategoryNode.data.name : "(No child)";
 
-    // parentCategory: the node one level above the childCategory, when available
-    // (This yields 'Severity Structure' in your example)
     let parentCategoryNode;
-    if (pathExRoot.length >= 3) {
-      parentCategoryNode = pathExRoot[pathExRoot.length - 3];
-    } else {
-      // fallback to the top-level node (first item after root)
-      parentCategoryNode = pathExRoot[0];
-    }
+    if (pathExRoot.length >= 3) parentCategoryNode = pathExRoot[pathExRoot.length - 3];
+    else parentCategoryNode = pathExRoot[0];
     const parentCategory = (parentCategoryNode && parentCategoryNode.data.name) ? parentCategoryNode.data.name : "(No parent)";
 
-    // Use the child's own definition (prefer `definition`, then `defination`, then `description`)
     const childDef = childCategoryNode.data.definition || childCategoryNode.data.defination || childCategoryNode.data.description || "No description";
 
-    // initialize structures
     if (!groups[parentCategory]) groups[parentCategory] = {};
     if (!groups[parentCategory][childCategory]) groups[parentCategory][childCategory] = new Set();
-
-    // store the child's definition (use set to avoid duplicates)
     groups[parentCategory][childCategory].add(childDef);
   });
 
-  // convert sets to arrays
   const normalized = {};
   Object.keys(groups).forEach(parent => {
     normalized[parent] = {};
@@ -2489,284 +2561,185 @@ function searchAndBuildResults(query) {
 
   return { groups: normalized, taxonomy: getCurrentTaxonomyName(), matchedLeaves };
 }
-  
 
+function renderSearchPopup(query) {
+  const result = searchAndBuildResults(query);
+  const popup = document.getElementById("profilePopup");
+  const titleEl = document.getElementById("profileTitle");
+  const contentEl = document.getElementById("profileContent");
+  const badgeEl = document.getElementById("profileTaxonomyBadge");
 
+  contentEl.innerHTML = "";
+  titleEl.textContent = `${query} Profile`;
+  if (badgeEl) badgeEl.textContent = result.taxonomy || getCurrentTaxonomyName();
 
-  // ---------- Render search popup in requested format ----------
-  function renderSearchPopup(query) {
-    const result = searchAndBuildResults(query);
-    const popup = document.getElementById("profilePopup");
-    const titleEl = document.getElementById("profileTitle");
-    const contentEl = document.getElementById("profileContent");
-    const badgeEl = document.getElementById("profileTaxonomyBadge");
+  if (!result.groups || Object.keys(result.groups).length === 0) {
+    contentEl.innerHTML = `<div class="important"><strong>No matches found.</strong></div>`;
+    popup.style.display = "block";
+    clearHighlights();
+    return;
+  }
 
-    // Reset
-    contentEl.innerHTML = "";
-    titleEl.textContent = `${query} Profile`;
-    if (badgeEl) badgeEl.textContent = result.taxonomy || getCurrentTaxonomyName();
+  Object.keys(result.groups).forEach(parentName => {
+    const childMap = result.groups[parentName];
+    Object.keys(childMap).forEach(childName => {
+      const headerDiv = document.createElement("div");
+      headerDiv.style.marginTop = "8px";
+      headerDiv.style.marginBottom = "4px";
+      headerDiv.innerHTML = `<strong>${escapeHtml(parentName)}: ${escapeHtml(childName)}</strong>`;
+      contentEl.appendChild(headerDiv);
 
-    if (!result.groups || Object.keys(result.groups).length === 0) {
-      contentEl.innerHTML = `<div class="important"><strong>No matches found.</strong></div>`;
-      popup.style.display = "block";
-      clearHighlights();
-      return;
-    }
-
-    // Output format required by user:
-    // ParentCategory: ChildCategory
-    // <child's definition>
-    // (grouped and deduplicated)
-
-    Object.keys(result.groups).forEach(parentName => {
-      const childMap = result.groups[parentName];
-      Object.keys(childMap).forEach(childName => {
-        // Header line
-        const headerDiv = document.createElement("div");
-        headerDiv.style.marginTop = "8px";
-        headerDiv.style.marginBottom = "4px";
-        headerDiv.innerHTML = `<strong>${escapeHtml(parentName)}: ${escapeHtml(childName)}</strong>`;
-        contentEl.appendChild(headerDiv);
-
-        // For each definition associated with that child
-        childMap[childName].forEach(defText => {
-          const defDiv = document.createElement("div");
-          defDiv.style.marginLeft = "8px";
-          defDiv.style.marginBottom = "6px";
-          defDiv.textContent = defText;
-          contentEl.appendChild(defDiv);
-        });
+      childMap[childName].forEach(defText => {
+        const defDiv = document.createElement("div");
+        defDiv.style.marginLeft = "8px";
+        defDiv.style.marginBottom = "6px";
+        defDiv.textContent = defText;
+        contentEl.appendChild(defDiv);
       });
     });
+  });
 
-    // Highlight matched leaves
-    clearHighlights();
-    if (result.matchedLeaves && result.matchedLeaves.length > 0) highlightNodes(result.matchedLeaves);
+  clearHighlights();
+  if (result.matchedLeaves && result.matchedLeaves.length > 0) highlightNodes(result.matchedLeaves);
 
-    popup.style.display = "block";
+  popup.style.display = "block";
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"'`=\/]/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","/":"&#x2F;","`":"&#x60;","=":"&#x3D;"}[s]));
+}
+
+// ---------- Node search / clear wiring ----------
+document.getElementById("searchBtn")?.addEventListener("click", () => {
+  const query = document.getElementById("platformSearch").value.trim();
+  if (!query) return alert("Enter a search term.");
+
+  root = filterTreeByQuery(query);
+  update(root);
+
+  renderSearchPopup(query);
+});
+
+document.getElementById("clearSearchBtn")?.addEventListener("click", () => {
+  root = d3.hierarchy(data);
+  update(root);
+  document.getElementById("platformSearch").value = '';
+  clearHighlights();
+});
+
+// ---------- Panel toggle ----------
+const rightPanel = document.querySelector('.panel');
+const togglePanelBtn = document.getElementById('togglePanelBtn');
+if (rightPanel) {
+  rightPanel.style.display = "none";
+  if (togglePanelBtn) togglePanelBtn.textContent = "Show Panel";
+  togglePanelBtn?.addEventListener("click", () => {
+    if (rightPanel.style.display === 'none') { rightPanel.style.display = 'block'; togglePanelBtn.textContent = "Hide Panel"; }
+    else { rightPanel.style.display = 'none'; togglePanelBtn.textContent = "Show Panel"; }
+  });
+}
+
+// Collapsible panel sections
+document.querySelectorAll(".panel-section").forEach(section => {
+  const header = section.querySelector(".panel-header");
+  if (!header) return;
+  header.setAttribute("data-title", header.textContent.replace(/[►▼]/g,'').trim());
+  section.classList.add("collapsed");
+  header.textContent = header.getAttribute("data-title") + " ►";
+  header.addEventListener("click", () => {
+    section.classList.toggle("collapsed");
+    const symbol = section.classList.contains("collapsed") ? "►" : "▼";
+    header.textContent = header.getAttribute("data-title") + " " + symbol;
+  });
+});
+
+// ---------- Node add/update/delete ----------
+document.getElementById("addNodeBtn")?.addEventListener("click", () => {
+  const name = document.getElementById("newNodeName").value.trim();
+  const desc = document.getElementById("newNodeDesc").value.trim();
+  if (!selectedNode || !name) return alert("Select a node and enter a name for the new node.");
+  if (!selectedNode.data.children && !selectedNode.data._children) selectedNode.data.children = [];
+  if (selectedNode.data._children) {
+    selectedNode.data.children = selectedNode.data._children;
+    selectedNode.data._children = null;
   }
+  selectedNode.data.children.push({ name, definition: desc || 'No description' });
+  root = d3.hierarchy(data);
+  update(root);
+});
 
-  // escapeHtml helper for safe header insertion
-  function escapeHtml(str) {
-    return String(str).replace(/[&<>"'`=\/]/g, s => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;","/":"&#x2F;","`":"&#x60;","=":"&#x3D;"}[s]));
-  }
+document.getElementById("updateNodeBtn")?.addEventListener("click", () => {
+  if (!selectedNode) return alert("Select a node first.");
+  const name = document.getElementById("newNodeName").value.trim();
+  const desc = document.getElementById("newNodeDesc").value.trim();
+  selectedNode.data.name = name || selectedNode.data.name;
+  selectedNode.data.definition = desc || selectedNode.data.definition;
+  selectedNode.data.defination = desc || selectedNode.data.defination;
+  loadPanel(selectedNode);
+  update(selectedNode);
+});
 
-  // ---------- Wire UI controls ----------
-  // Collapsible panel sections (keeps your previous markup behavior)
-  document.querySelectorAll(".panel-section").forEach(section => {
-    const header = section.querySelector(".panel-header");
-    if (!header) return;
-    header.setAttribute("data-title", header.textContent.replace(/[►▼]/g,'').trim());
-    section.classList.add("collapsed");
-    header.textContent = header.getAttribute("data-title") + " ►";
-    header.addEventListener("click", () => {
-      section.classList.toggle("collapsed");
-      const symbol = section.classList.contains("collapsed") ? "►" : "▼";
-      header.textContent = header.getAttribute("data-title") + " " + symbol;
-    });
-  });
-
-  // Panel toggle
-  const rightPanel = document.querySelector('.panel');
-  const togglePanelBtn = document.getElementById('togglePanelBtn');
-  if (rightPanel) {
-    rightPanel.style.display = "none";
-    if (togglePanelBtn) togglePanelBtn.textContent = "Show Panel";
-    if (togglePanelBtn) togglePanelBtn.addEventListener("click", () => {
-      if (rightPanel.style.display === 'none') { rightPanel.style.display = 'block'; togglePanelBtn.textContent = "Hide Panel"; }
-      else { rightPanel.style.display = 'none'; togglePanelBtn.textContent = "Show Panel"; }
-    });
-  }
-
-  // basic buttons
-  const expandAllBtn = document.getElementById("expandAllBtn");
-  if (expandAllBtn) expandAllBtn.addEventListener("click", ()=>{ expandAll(root); update(root); });
-  const collapseAllBtn = document.getElementById("collapseAllBtn");
-  if (collapseAllBtn) collapseAllBtn.addEventListener("click", ()=>{ collapseAll(root); update(root); });
-  const toggleLayoutBtn = document.getElementById("toggleLayoutBtn");
-  if (toggleLayoutBtn) toggleLayoutBtn.addEventListener("click", ()=>{ radial = !radial; update(root); });
-
-  // refresh builder
-  const refreshBtn = document.getElementById("refreshBtn");
-  if (refreshBtn) refreshBtn.addEventListener("click", ()=> {
-    svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
-    initTree();
-  });
-
-  // level expand/collapse buttons
-  const expandLevelBtn = document.getElementById("expandLevelBtn");
-  if (expandLevelBtn) expandLevelBtn.addEventListener("click", ()=> {
-    const level = parseInt(document.getElementById("expandLevelInput").value);
-    if (!isNaN(level)) expandLevel(level);
-  });
-  const collapseLevelBtn = document.getElementById("collapseLevelBtn");
-  if (collapseLevelBtn) collapseLevelBtn.addEventListener("click", ()=> {
-    const level = parseInt(document.getElementById("collapseLevelInput").value);
-    if (!isNaN(level)) collapseLevel(level);
-  });
-
-  // Add/Update/Delete node controls (preserve your logic)
-  const addNodeBtn = document.getElementById("addNodeBtn");
-  if (addNodeBtn) addNodeBtn.addEventListener("click", ()=> {
-    const name = document.getElementById("newNodeName").value.trim();
-    const desc = document.getElementById("newNodeDesc").value.trim();
-    if (!selectedNode || !name) return alert("Select a node and enter a name for the new node.");
-    if (!selectedNode.data.children && !selectedNode.data._children) selectedNode.data.children = [];
-    if (selectedNode.data._children) {
-      selectedNode.data.children = selectedNode.data._children;
-      selectedNode.data._children = null;
-    }
-    selectedNode.data.children.push({ name, definition: desc || 'No description' });
+document.getElementById("deleteNodeBtn")?.addEventListener("click", () => {
+  if (!selectedNode || selectedNode === root) return alert("Select a non-root node to delete.");
+  if (confirm(`Are you sure you want to delete "${selectedNode.data.name}"?`)) {
+    const parent = selectedNode.parent;
+    const siblings = parent.data.children || parent.data._children;
+    if (!siblings) return;
+    const idx = siblings.findIndex(n => n.name === selectedNode.data.name);
+    if (idx >= 0) siblings.splice(idx, 1);
     root = d3.hierarchy(data);
+    selectedNode = null;
     update(root);
-  });
+  }
+});
+// ---------- Button wiring ----------
+document.getElementById("expandAllBtn")?.addEventListener("click", () => {
+  expandAll(root);
+  update(root);
+});
 
-  const updateNodeBtn = document.getElementById("updateNodeBtn");
-  if (updateNodeBtn) updateNodeBtn.addEventListener("click", ()=> {
-    if (!selectedNode) return alert("Select a node first.");
-    const name = document.getElementById("newNodeName").value.trim();
-    const desc = document.getElementById("newNodeDesc").value.trim();
-    selectedNode.data.name = name || selectedNode.data.name;
-    selectedNode.data.definition = desc || selectedNode.data.definition;
-    selectedNode.data.defination = desc || selectedNode.data.defination;
-    loadPanel(selectedNode);
-    update(selectedNode);
-  });
+document.getElementById("collapseAllBtn")?.addEventListener("click", () => {
+  collapseAll(root);
+  update(root);
+});
 
-  const deleteNodeBtn = document.getElementById("deleteNodeBtn");
-  if (deleteNodeBtn) deleteNodeBtn.addEventListener("click", ()=> {
-    if (!selectedNode || selectedNode === root) return alert("Select a non-root node to delete.");
-    if (confirm(`Are you sure you want to delete "${selectedNode.data.name}"?`)) {
-      const parent = selectedNode.parent;
-      const siblings = parent.data.children || parent.data._children;
-      if (!siblings) return;
-      const idx = siblings.findIndex(n => n.name === selectedNode.data.name);
-      if (idx >= 0) siblings.splice(idx, 1);
-      root = d3.hierarchy(data);
-      selectedNode = null;
-      update(root);
-    }
-  });
+document.getElementById("expandLevelBtn")?.addEventListener("click", () => {
+  const level = parseInt(prompt("Enter level to expand (root = 0):"));
+  if (!isNaN(level)) expandLevel(level);
+});
 
-  // Export JSON
-  const exportJsonBtn = document.getElementById("exportJsonBtn");
-  if (exportJsonBtn) exportJsonBtn.addEventListener("click", ()=> {
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-    a.download = "taxonomy.json";
-    a.click();
-  });
+document.getElementById("collapseLevelBtn")?.addEventListener("click", () => {
+  const level = parseInt(prompt("Enter level to collapse (root = 0):"));
+  if (!isNaN(level)) collapseLevel(level);
+});
 
-  // Import JSON
-  const importJsonInput = document.getElementById("importJsonInput");
-  if (importJsonInput) importJsonInput.addEventListener("change", event => {
-    const file = event.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const imported = JSON.parse(e.target.result);
-        data = imported;
-        svg.selectAll("*").remove();
-        initTree();
-      } catch (err) {
-        alert("Invalid JSON");
-      }
-    };
-    reader.readAsText(file);
-  });
+document.getElementById("toggleLayoutBtn")?.addEventListener("click", () => {
+  radial = !radial;
+  update(root);
+});
+// ---------- Export / Import ----------
+document.getElementById("exportJsonBtn")?.addEventListener("click", () => {
+  const jsonStr = JSON.stringify(data, null, 2);
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "tree_export.json";
+  a.click();
+  URL.revokeObjectURL(url);
+});
 
-  // Export PNG (rasterize current SVG)
-  const exportPngBtn = document.getElementById("exportPngBtn");
-  if (exportPngBtn) exportPngBtn.addEventListener("click", () => {
-    const svgNode = svg.node();
-    const bbox = svgNode.getBBox();
-    const serializer = new XMLSerializer();
-    const svgString = serializer.serializeToString(svgNode);
-    const canvas = document.createElement("canvas");
-    canvas.width = bbox.width + 100;
-    canvas.height = bbox.height + 100;
-    const ctx = canvas.getContext("2d");
-    const img = new Image();
-    const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(svgBlob);
-
-    img.onload = function () {
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, -bbox.x + 50, -bbox.y + 50);
-      URL.revokeObjectURL(url);
-
-      const pngLink = document.createElement("a");
-      pngLink.download = "taxonomy.png";
-      pngLink.href = canvas.toDataURL("image/png");
-      pngLink.click();
-    };
-    img.src = url;
-  });
-
-  // ---------- Search wiring ----------
-  const searchBtn = document.getElementById("searchBtn");
-  if (searchBtn) searchBtn.addEventListener("click", () => {
-    const queryInput = document.getElementById("platformSearch");
-    if (!queryInput) return alert("Search input not found.");
-    const query = queryInput.value.trim();
-    if (!query) return alert("Enter a search term.");
-
-    // auto-select taxonomy and load data for search
-    const sel = document.getElementById("taxonomySelector");
-    if (sel) {
-      const selected = sel.value;
-      if (selected === "platform") data = platformData;
-      else if (selected === "country") data = countryData;
-      else if (selected === "dataset") data = datasetData;
-    }
-
-    // rebuild root to ensure hierarchy matches chosen taxonomy
-    root = d3.hierarchy(data);
-
-    // show results popup
-    renderSearchPopup(query);
-  });
-
-  // close popup
-  const closeProfilePopup = document.getElementById("closeProfilePopup");
-  if (closeProfilePopup) closeProfilePopup.addEventListener("click", () => {
-    const popup = document.getElementById("profilePopup");
-    if (popup) popup.style.display = "none";
-    clearHighlights();
-  });
-
-  // Download profile TXT
-  const downloadTxt = document.getElementById("downloadProfileTxt");
-  if (downloadTxt) downloadTxt.addEventListener("click", () => {
-    const content = document.getElementById("profileContent").innerText;
-    const blob = new Blob([content], { type: "text/plain" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    const title = (document.getElementById("profileTitle").textContent || "Profile").replace(/\s+/g, "_");
-    link.download = `${title}.txt`;
-    link.click();
-  });
-
-  // Download profile PDF using jsPDF (assumes jsPDF loaded)
-  const downloadPdf = document.getElementById("downloadProfilePdf");
-  if (downloadPdf) downloadPdf.addEventListener("click", () => {
-    if (!window.jspdf) {
-      alert("jsPDF not found. Include jsPDF to enable PDF download.");
-      return;
-    }
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const content = document.getElementById("profileContent").innerText;
-    const lines = doc.splitTextToSize(content, 180);
-    doc.setFontSize(11);
-    doc.text(lines, 10, 10);
-    const title = (document.getElementById("profileTitle").textContent || "Profile").replace(/\s+/g, "_");
-    doc.save(`${title}.pdf`);
-  });
-
-  // taxonomy selector switches the base data and rebuilds tree
+document.getElementById("importJsonBtn")?.addEventListener("change", (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try { data = JSON.parse(ev.target.result); root = d3.hierarchy(data); update(root); }
+    catch(err) { alert("Invalid JSON file."); }
+  };
+  reader.readAsText(file);
+});
+// taxonomy selector switches the base data and rebuilds tree
   const taxonomySelector = document.getElementById("taxonomySelector");
   if (taxonomySelector) taxonomySelector.addEventListener("change", (event) => {
     const selected = event.target.value;
@@ -2779,24 +2752,13 @@ function searchAndBuildResults(query) {
     svg.transition().duration(300).call(zoom.transform, d3.zoomIdentity);
     initTree();
   });
+// ---------- Radial toggle ----------
+document.getElementById("toggleRadialBtn")?.addEventListener("click", () => { radial = !radial; update(root); });
 
-  // Auto-sync panelDef to selected node
-  const panelDef = document.getElementById("panelDef");
-  if (panelDef) panelDef.addEventListener("input", (e) => {
-    if (!selectedNode) return;
-    selectedNode.data.definition = e.target.value;
-    selectedNode.data.defination = e.target.value;
-    selectedNode.data.description = e.target.value;
-  });
+// ---------- Initial build ----------
+initTree();
 
-  // ---------- Utility: flattenHierarchy for UI that used it earlier ----------
-  function flattenHierarchy(rootNode) {
-    const nodes = [];
-    rootNode.each(d => nodes.push(d));
-    return nodes;
-  }
+// Utility: stub for taxonomy name
+function getCurrentTaxonomyName() { return "Default Taxonomy"; }
 
-  // ---------- Initial build ----------
-  initTree();
-
-}); // DOMContentLoaded end
+});
